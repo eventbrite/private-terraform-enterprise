@@ -1,35 +1,94 @@
-# Automated Installation of PTFE within a TLZ shared services account
+TFE Install
+===========
 
-This repo is based upon Hashicorp's own https://github.com/hashicorp/private-terraform-enterprise but has been changed extensively to fit Eventbrite needs and to be part of the broader Terraform Landing Zone project.
+Deploy the external PostgreSQL database and S3 bucket used in the External Services operational mode of TFE along with the primary and optional secondary EC2 instances that will run TFE, an Application Load Balancer and associated resources, and some required IAM resources.
 
-It contains Terraform configurations that can do [automated installations](https://www.terraform.io/docs/enterprise/private/automating-the-installer.html) of [Private Terraform Enterprise](https://www.terraform.io/docs/enterprise/private/index.html) (PTFE) in an AWS Terraform Landing Zone shared services account.
+See [documentation](https://confluence.evbhome.com/display/SRE/Install+Terraform+Enterprise) for more details.
 
-## Preliminary steps
-Before you can proceed with the installation of PTFE you must have bootstrapped your TLZ shared services account with a VPC and at least one private and one public subnets.
+## Requirements
 
-## Explanation of the Two Stage Deployment Model
-PTFE is deployed in two stages, each of which uses the open source flavor of Terraform:
-1. Will instantiate a private S3 bucket to which the PTFE software, license, and settings files can be uploaded and a KMS key used to encrypt the bucket.
-2. Will then deploy the external PostgreSQL database and S3 bucket used in the [Production - External Services](https://www.terraform.io/docs/enterprise/private/preflight-installer.html#operational-mode-decision) operational mode of PTFE along with the primary and optional secondary EC2 instances that will run PTFE, an Application Load Balancer and associated resources, and some required IAM resources.
-de in stage 2.
+| Name | Version |
+|------|---------|
+| terraform | >= 0.12 |
 
-## Description of the User Data Script that Installs PTFE
-During stage 2, a user data script generated from [user-data-ubuntu-online.tpl](./examples/aws/user-data-ubuntu-online.tpl) is run on each instance to install PTFE on it and to initialize the PostgreSQL database and S3 bucket if that has not already been done. The online scripts also install Docker. Since the user data script is templated, all relevant PTFE settings, whether entered in the terraform.tfvars file or computed by Terraform, are passed into it before it is run when the instances are deployed.
+## Providers
 
-The script does the following things:
-1. It determines the private IP, private DNS, and public IP (in public networks) of each EC2 instance being deployed to run PTFE.
-2. It writes out the replicated.conf, ptfe-settings.json, and create_schemas.sql files.
+| Name | Version |
+|------|---------|
+| aws | n/a |
+| template | n/a |
 
-At this point given that we are performing an [online](https://www.terraform.io/docs/enterprise/private/install-installer.html#run-the-installer-online) installation, the script does the following:
-1. It installs the aws CLI and uses it to retrieve the PTFE license file from the PTFE source bucket.
-2. It sets SELinux to permissive mode (except on RHEL).
-3. It installs the psql utility and connects to the PostgreSQL database in order to create the three schemas needed by PTFE.
-4. It downloads the PTFE installer using curl and then runs it to install both Docker and PTFE.
+## Inputs
 
-The installer uses the replicated.conf, ptfe-settings.json, create_schemas.sql, and ptfe-license.rli files that the script previously wrote to disk.
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| airgap\_bundle | S3 bucket object container airgap bundle | `string` | `""` | no |
+| alb\_internal | whether ALB is internal or not | `bool` | `false` | no |
+| alb\_subnet\_ids | Subnet IDs of DB subnets in VPC | `any` | n/a | yes |
+| aws\_instance\_ami | Amazon Machine Image ID | `any` | n/a | yes |
+| aws\_instance\_profile | use credentials from the AWS instance profile | `string` | `"1"` | no |
+| aws\_instance\_type | EC2 instance type | `any` | n/a | yes |
+| aws\_profile | AWS CLI profile for terraform to execute with | `string` | n/a | yes |
+| aws\_region | Region to use for the AWS provider | `string` | n/a | yes |
+| ca\_certs | custom certificate authority (CA) bundle | `string` | `""` | no |
+| capacity\_concurrency | number of concurrent plans and applies; defaults to 10 | `string` | `"10"` | no |
+| capacity\_memory | The maximum amount of memory (in megabytes) that a Terraform plan or apply can use on the system; defaults to 256 | `string` | `"256"` | no |
+| create\_first\_user\_and\_org | whether to create the first site admin and org | `any` | n/a | yes |
+| create\_second\_instance | whether to create second PTFE instance | `string` | `"0"` | no |
+| custom\_image\_tag | alternative Terraform worker image name and tag | `string` | `"hashicorp/build-worker:now"` | no |
+| database\_instance\_class | instance class for RDS database | `string` | `"db.t2.medium"` | no |
+| database\_multi\_az | boolean indicating whether to run multi-az RDS | `string` | `"false"` | no |
+| database\_storage | allocated storage for RDS database | `string` | `"10"` | no |
+| db\_subnet\_ids | Subnet IDs of DB subnets in VPC | `any` | n/a | yes |
+| eb\_priv\_cidrs | CIDRs blocks of EB legacy account private subnets | `any` | n/a | yes |
+| enable\_metrics\_collection | whether PTFE's internal metrics collection should be enabled | `string` | `"true"` | no |
+| enc\_password | Set the encryption password for the install | `any` | n/a | yes |
+| extra\_no\_proxy | a comma separated list of hosts to exclude from proxying | `string` | `""` | no |
+| hostname | the DNS hostname you will use to access PTFE | `string` | `""` | no |
+| initial\_admin\_email | email of initial site admin user in PTFE | `any` | n/a | yes |
+| initial\_admin\_password | username of initial site admin user in PTFE | `any` | n/a | yes |
+| initial\_admin\_username | username of initial site admin user in PTFE | `any` | n/a | yes |
+| initial\_org\_email | email of initial organization in PTFE | `any` | n/a | yes |
+| initial\_org\_name | name of initial organization in PTFE | `any` | n/a | yes |
+| installation\_type | PTFE deployment mode | `string` | `"production"` | no |
+| linux | ubuntu, rhel, or centos | `string` | `"ubuntu"` | no |
+| namespace | Unique name to use for DNS and resource naming | `any` | n/a | yes |
+| operational\_mode | whether installation is online or airgapped | `string` | `"online"` | no |
+| owner | EC2 instance owner | `string` | `""` | no |
+| pg\_dbname | Name of PostgreSQL database | `string` | `"ptfe"` | no |
+| pg\_extra\_params | extra parameters for PostgreSQL | `string` | `"sslmode=require"` | no |
+| pg\_password | Password for PostgreSQL database | `any` | n/a | yes |
+| pg\_user | Name of PostgreSQL database user | `string` | `"ptfe"` | no |
+| placement | Set to placement\_s3 for S3 | `string` | `"placement_s3"` | no |
+| production\_type | external or disk | `string` | `"external"` | no |
+| ptfe\_admin\_password | password for PTFE admin console (at port 8800) | `any` | n/a | yes |
+| ptfe\_license | key of license file within the source S3 bucket | `any` | n/a | yes |
+| ptfe\_subnet\_ids | Subnet IDs of subnets for EC2 instances in VPC | `any` | n/a | yes |
+| public\_ip | should ec2 instance have public ip? | `bool` | `true` | no |
+| replicated\_bootstrapper | S3 bucket object containing replicated bootstrapper replicated.tar.gz | `string` | `""` | no |
+| route53\_zone | name of Route53 zone to use | `any` | n/a | yes |
+| s3\_bucket | Name of the S3 bucket | `any` | n/a | yes |
+| s3\_region | region of the S3 bucket | `any` | n/a | yes |
+| s3\_sse | enables server-side encryption of objects in S3. | `string` | `"aws:kms"` | no |
+| s3\_sse\_kms\_key\_id | An optional KMS key for use when S3 server-side encryption is enabled | `any` | n/a | yes |
+| shared\_svcs\_account\_number | Account number for the shared services account. Needed because we are jumping through an assumed role. | `string` | n/a | yes |
+| shared\_svcs\_admin\_role | Name of the admin role establishing the trust between the master payer account and the shared services account | `string` | `"tlz_organization_account_access_role"` | no |
+| source\_bucket\_name | Name of the S3 PTFE source bucket containing PTFE license file, airgap bundle, replicated tar file, and settings files | `any` | n/a | yes |
+| ssh\_key\_name | AWS key pair name to install on the EC2 instance | `any` | n/a | yes |
+| ssl\_certificate\_arn | ARN of an SSL certificate uploaded to IAM or AWS Certificate Manager for use with PTFE ELB | `any` | n/a | yes |
+| tbw\_image | whether to use standard or custom Terraform worker image | `string` | `"default_image"` | no |
+| ttl | EC2 instance TTL | `string` | `"-1"` | no |
+| vault\_path | Path on the host system to store the vault files | `string` | `"/var/lib/tfe-vault"` | no |
+| vault\_store\_snapshot | whether vault files should be stored in snapshots | `string` | `"1"` | no |
+| vpc\_id | ID of VPC | `any` | n/a | yes |
 
-The script then enters a loop, testing the availability of the PTFE app with a curl command until it is ready. Finally, the script uses the TFE API to create the first site admin user, a TFE API token for this user, and the first organization. This leverages the [Initial Admin Creation Token](https://www.terraform.io/docs/enterprise/private/automating-initial-user.html) (IACT). At this point, the generated API token could be used to automate additional PTFE configuration if desired.
+## Outputs
 
-
-
-WORK IN PROGRESS
+| Name | Description |
+|------|-------------|
+| db\_endpoint | n/a |
+| ptfe\_fqdn | n/a |
+| ptfe\_private\_dns | n/a |
+| ptfe\_private\_ip | n/a |
+| ptfe\_public\_dns | n/a |
+| ptfe\_public\_ip | n/a |
