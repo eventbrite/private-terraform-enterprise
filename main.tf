@@ -43,7 +43,7 @@ resource "aws_security_group" "ptfe" {
     protocol    = "tcp"
     from_port   = 53
     to_port     = 53
-    cidr_blocks = split(",", var.eb_priv_cidrs)
+    cidr_blocks = split(",", var.eb_prod_pub_cidrs)
   }
 
   # Connect to eb ops-dir
@@ -51,15 +51,31 @@ resource "aws_security_group" "ptfe" {
     protocol    = "udp"
     from_port   = 53
     to_port     = 53
-    cidr_blocks = split(",", var.eb_priv_cidrs)
+    cidr_blocks = split(",", var.eb_prod_pub_cidrs)
   }
 
-  # Connect to Consul on eb qa/stage/prod
+  # Connect to Consul on eb prod
   egress {
     protocol    = "tcp"
     from_port   = 8500
     to_port     = 8500
-    cidr_blocks = split(",", var.eb_priv_cidrs)
+    cidr_blocks = split(",", var.eb_prod_priv_cidrs)
+  }
+
+  # Connect to Consul on eb stage
+  egress {
+    protocol    = "tcp"
+    from_port   = 8500
+    to_port     = 8500
+    cidr_blocks = split(",", var.eb_stage_priv_cidrs)
+  }
+
+  # Connect to Consul on eb qa
+  egress {
+    protocol    = "tcp"
+    from_port   = 8500
+    to_port     = 8500
+    cidr_blocks = split(",", var.eb_qa_priv_cidrs)
   }
 
   egress {
