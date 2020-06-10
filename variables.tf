@@ -319,10 +319,6 @@ variable "initial_org_email" {
   description = "email of initial organization in PTFE"
 }
 
-variable "eb_prod_pub_cidrs" {
-  description = "CIDRs blocks of EB legacy account prod public subnets"
-}
-
 variable "eb_prod_priv_cidrs" {
   description = "CIDRs blocks of EB legacy account prod private subnets"
 }

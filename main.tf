@@ -38,22 +38,6 @@ resource "aws_security_group" "ptfe" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Connect to eb ops-dir
-  egress {
-    protocol    = "tcp"
-    from_port   = 53
-    to_port     = 53
-    cidr_blocks = split(",", var.eb_prod_pub_cidrs)
-  }
-
-  # Connect to eb ops-dir
-  egress {
-    protocol    = "udp"
-    from_port   = 53
-    to_port     = 53
-    cidr_blocks = split(",", var.eb_prod_pub_cidrs)
-  }
-
   # Connect to Consul on eb prod
   egress {
     protocol    = "tcp"

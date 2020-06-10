@@ -41,7 +41,6 @@ See [documentation](https://confluence.evbhome.com/display/SRE/Install+Terraform
 | database\_storage | allocated storage for RDS database | `string` | `"10"` | no |
 | db\_subnet\_ids | Subnet IDs of DB subnets in VPC | `any` | n/a | yes |
 | eb\_prod\_priv\_cidrs | CIDRs blocks of EB legacy account prod private subnets | `any` | n/a | yes |
-| eb\_prod\_pub\_cidrs | CIDRs blocks of EB legacy account prod public subnets | `any` | n/a | yes |
 | eb\_qa\_priv\_cidrs | CIDRs blocks of EB legacy account QA private subnets | `any` | n/a | yes |
 | eb\_stage\_priv\_cidrs | CIDRs blocks of EB legacy account stage private subnets | `any` | n/a | yes |
 | enable\_metrics\_collection | whether PTFE's internal metrics collection should be enabled | `string` | `"true"` | no |
